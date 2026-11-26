@@ -1,0 +1,6 @@
+{
+  "name": "Mission to Win - Snowbrawl Arena Online",
+  "description": "Game kuis petak umpet perang salju multiplayer online real-time di Desa Alaska.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

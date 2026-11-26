@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission to Win - Snowbrawl Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        .font-game {
+            font-family: 'Fredoka', sans-serif;
+        }
+        /* Efek kaca beku saat terkena lemparan salju */
+        .frozen-overlay {
+            background: rgba(186, 230, 253, 0.85);
+            backdrop-filter: blur(6px);
+            border: 4px solid #38bdf8;
+            animation: pulseIce 1.5s infinite;
+        }
+        @keyframes pulseIce {
+            0%, 100% { box-shadow: inset 0 0 20px #0284c7; }
+            50% { box-shadow: inset 0 0 40px #7dd3fc; }
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .kill-feed-item {
+            animation: slideDown 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-900 select-none">
+
+    <!-- MODAL AWAL: MASUK KE ARENA -->
+    <div id="startModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+        <div class="bg-slate-800 border-2 border-sky-400/50 rounded-3xl max-w-lg w-full p-6 sm:p-8 text-center shadow-2xl">
+            <div class="inline-block bg-sky-500/20 text-sky-300 font-game text-sm px-4 py-1 rounded-full mb-3 border border-sky-400/30">
+                ❄️ DESA ALASKA • PETAK UMPET SALJU (38 SISWA)
+            </div>
+            <h1 class="font-game text-3xl sm:text-4xl font-bold text-white mb-2 tracking-wide">
+                MISSION TO WIN
+            </h1>
+            <p class="text-sky-300 font-game text-lg mb-5">Snowbrawl Arena Edition</p>
+            
+            <div class="bg-slate-900/80 rounded-2xl p-4 mb-6 text-left text-xs sm:text-sm text-slate-300 space-y-2 border border-slate-700/60">
+                <p class="font-bold text-sky-300">Aturan Permainan (5 Menit):</p>
+                <p>1️⃣ Setiap pemain memiliki <b>5 Nyawa (❤️❤️❤️❤️❤️)</b>. Kena tembak 5x = <b>Game Over / Keluar Arena</b>!</p>
+                <p>2️⃣ Jawab 1 soal dengan benar untuk mendapatkan <b>+3 Peluru Salju</b> (3x Combo = <i>Mega Snowball</i> penembus tempat persembunyian).</p>
+                <p>3️⃣ Sembunyi di balik <b>Igloo, Pohon Pinus, Tumpukan Kayu, atau Gundukan Salju</b> untuk menghindari tembakan biasa!</p>
+                <p>4️⃣ Pemenang ditentukan dari total <b>Soal Benar + Tembakan Mengenai Lawan</b>!</p>
+            </div>
+
+            <div class="mb-5 text-left">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Nama Siswa (Karaktermu)</label>
+                <input type="text" id="playerNameInput" value="Kamu (Siswa)" maxlength="16"
+                    class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white font-semibold focus:outline-none focus:border-sky-400 transition">
+            </div>
+
+            <button onclick="startGame()" 
+                class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-game font-bold text-lg shadow-lg shadow-sky-500/30 transform active:scale-95 transition cursor-pointer">
+                MASUK ARENA PERTEMPURAN 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL AKHIR GAME: PODIUM PEMENANG -->
+    <div id="endModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+        <div class="bg-slate-800 border-2 border-amber-400/60 rounded-3xl max-w-lg w-full p-6 sm:p-8 text-center shadow-2xl">
+            <div class="text-5xl mb-2">🏆</div>
+            <h2 class="font-game text-3xl font-bold text-amber-400 mb-1">PERTANDINGAN SELESAI!</h2>
+            <p class="text-slate-300 text-sm mb-5">Peringkat berdasarkan total <b>Soal Benar + Lawan Tertembak</b></p>
+            
+            <div id="podiumList" class="space-y-2.5 mb-6 text-left">
+                <!-- Diisi otomatis via JS -->
+            </div>
+
+            <button onclick="startGame()" 
+                class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-game font-bold text-lg shadow-lg shadow-amber-500/30 transition cursor-pointer">
+                MAIN LAGI 🔄
+            </button>
+        </div>
+    </div>
+
+    <!-- HEADER UTAMA -->
+    <header class="bg-slate-800/90 border-b border-slate-700/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
+        <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-xl shadow">
+                ❄️
+            </div>
+            <div>
+                <h1 class="font-game font-bold text-base sm:text-lg leading-tight text-white">MISSION TO WIN</h1>
+                <p class="text-[11px] text-sky-400 font-medium">Desa Alaska • 38 Siswa Aktif</p>
+            </div>
+        </div>
+
+        <!-- Kill Feed Notifikasi Tengah -->
+        <div id="killFeedContainer" class="hidden md:flex items-center justify-center flex-1 max-w-md mx-2">
+            <div id="killFeedText" class="bg-slate-900/90 border border-slate-700 px-4 py-1.5 rounded-full text-xs font-medium text-sky-200 truncate">
+                ❄️ Selamat datang di Desa Alaska! Jawab soal untuk mendapat 3 peluru!
+            </div>
+        </div>
+
+        <!-- Nyawa, Skor & Timer Pemain -->
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1" title="Sisa Nyawa (5x Kena = Game Over)">
+                <span id="playerLivesDisplay" class="text-xs sm:text-sm tracking-tighter">❤️❤️❤️❤️❤️</span>
+            </div>
+            <div class="bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5">
+                <span class="text-xs text-slate-400">Skor:</span>
+                <span id="playerScoreDisplay" class="font-game font-bold text-sky-400 text-base">0</span>
+            </div>
+            <div class="bg-rose-500/20 border border-rose-500/40 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                <span class="text-sm">⏱️</span>
+                <span id="timerDisplay" class="font-game font-bold text-rose-300 text-base">05:00</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- KONTEN UTAMA: SPLIT SCREEN (KIRI: PANEL KONTROL SISWA, KANAN: ARENA DESA ALASKA) -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- PANEL KIRI: KONTROL SISWA (KUIS, PELURU & PETAK UMPET) -->
+        <section class="w-full lg:w-[420px] xl:w-[450px] bg-slate-800 border-b lg:border-b-0 lg:border-r border-slate-700 p-4 flex flex-col justify-between gap-4 relative z-10">
+            
+            <!-- Overlay saat pemain terkena tembakan musuh (Membeku 2.5 detik) -->
+            <div id="frozenOverlay" class="hidden absolute inset-0 z-30 frozen-overlay flex flex-col items-center justify-center p-6 text-center text-slate-900">
+                <div class="text-6xl mb-3 animate-bounce">🥶</div>
+                <h3 class="font-game text-2xl font-bold text-slate-900 mb-1">KAMU TERTEMBAK!</h3>
+                <p id="frozenByText" class="text-sm font-semibold text-slate-800 mb-3">Terkena tembakan salju! (-1 Nyawa)</p>
+                <div class="bg-white/80 px-4 py-1.5 rounded-full font-game font-bold text-sky-700 text-lg">
+                    Cair dalam <span id="frozenTimer">3</span> detik...
+                </div>
+            </div>
+
+            <!-- Overlay Game Over saat pemain kehabisan 5 nyawa -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+                <div class="text-6xl mb-3">💀</div>
+                <h3 class="font-game text-3xl font-bold text-rose-500 mb-1">GAME OVER!</h3>
+                <p id="eliminatedByText" class="text-sm text-slate-300 mb-4">Nyawamu sudah habis (5x terkena tembakan).</p>
+                <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4 w-full max-w-xs mb-5 space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Soal Dijawab Benar:</span>
+                        <span id="goQuestionsCount" class="font-bold text-emerald-400">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Lawan Tertembak:</span>
+                        <span id="goHitsCount" class="font-bold text-sky-400">0</span>
+                    </div>
+                    <div class="flex justify-between border-t border-slate-800 pt-2">
+                        <span class="text-slate-300 font-semibold">Total Skor Akhir:</span>
+                        <span id="goTotalScore" class="font-game font-bold text-amber-400 text-base">0</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">Kamu bisa tetap menonton sisa pertandingan di arena atau mulai ulang.</p>
+                <button onclick="resetGame()" class="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-game font-bold text-sm transition cursor-pointer">
+                    KELUAR / MAIN ULANG 🔄
+                </button>
+            </div>
+
+            <!-- Status Peluru Salju & Statistik -->
+            <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-700/80 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div id="snowballVisual" class="w-12 h-12 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 flex items-center justify-center text-2xl transition-all duration-300">
+                        💨
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-semibold">Peluru Salju Tersedia</div>
+                        <div id="snowballStatusText" class="font-game font-bold text-sm sm:text-base text-slate-200">
+                            0 Peluru (Jawab soal = +3!)
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-slate-400 font-semibold">Statistik Kamu</div>
+                    <div id="comboDisplay" class="font-game font-bold text-xs sm:text-sm text-amber-400">0 Soal • 0 Hit</div>
+                </div>
+            </div>
+
+            <!-- Kotak Pertanyaan Pembelajaran -->
+            <div class="flex-1 flex flex-col justify-center bg-slate-900/60 rounded-2xl p-4 border border-slate-700/70">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg">
+                        📝 Misi Pertanyaan
+                    </span>
+                    <span id="feedbackBadge" class="hidden text-xs font-bold px-2.5 py-1 rounded-lg"></span>
+                </div>
+                
+                <h2 id="questionText" class="text-base sm:text-lg font-bold text-white mb-4 leading-snug">
+                    Memuat pertanyaan...
+                </h2>
+
+                <div id="optionsContainer" class="grid grid-cols-1 gap-2.5">
+                    <!-- Tombol pilihan jawaban diisi via JS -->
+                </div>
+            </div>
+
+            <!-- Panel Aksi: Petak Umpet & Lempar Bola Salju -->
+            <div class="bg-slate-900/90 rounded-2xl p-3.5 border border-slate-700/80 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-400 uppercase">🎯 Aksi & Persembunyian</span>
+                    <button id="hideActionBtn" onclick="toggleSeekCover()"
+                        class="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition cursor-pointer">
+                        🌲 Cari Tempat Sembunyi
+                    </button>
+                </div>
+                
+                <div class="flex gap-2">
+                    <select id="targetSelect" onchange="syncTargetFromDropdown()"
+                        class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-sky-400">
+                        <option value="">-- Klik teman di arena / pilih --</option>
+                    </select>
+                    
+                    <button id="throwBtn" onclick="playerThrowSnowball()" disabled
+                        class="px-5 py-2.5 rounded-xl font-game font-bold text-sm bg-slate-700 text-slate-400 cursor-not-allowed transition transform active:scale-95 flex items-center gap-1.5">
+                        <span>TEMBAK!</span>
+                        <span>❄️</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL KANAN: ARENA DESA ALASKA (PETAK UMPET 38 SISWA) -->
+        <section class="flex-1 relative bg-sky-100 flex flex-col min-h-[380px] lg:min-h-0">
+            <!-- Canvas Arena Desa Alaska -->
+            <div id="canvasWrapper" class="flex-1 relative w-full h-full overflow-hidden">
+                <canvas id="arenaCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+                
+                <!-- Petunjuk Mini di Sudut Kiri Atas Arena -->
+                <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 pointer-events-none">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span id="aliveCounterText">Desa Alaska • 38/38 Siswa Bertahan</span>
+                </div>
+
+                <!-- Mini Leaderboard Top 3 di Sudut Kanan Atas Arena -->
+                <div class="absolute top-3 right-3 bg-slate-900/85 backdrop-blur-sm text-white p-2.5 rounded-xl border border-slate-700/80 text-xs w-52 pointer-events-none shadow-lg">
+                    <div class="font-game font-bold text-amber-400 mb-1.5 flex items-center justify-between">
+                        <span>👑 TOP 3 SKOR</span>
+                        <span class="text-[10px] text-slate-400">Soal+Hit</span>
+                    </div>
+                    <div id="miniLeaderboard" class="space-y-1">
+                        <!-- Diisi otomatis via JS -->
+                    </div>
+                </div>
+
+                <!-- Legenda Petak Umpet di Bawah Arena -->
+                <div class="absolute bottom-3 left-3 right-3 flex justify-center pointer-events-none">
+                    <div class="bg-slate-900/75 backdrop-blur-sm text-sky-100 px-3.5 py-1 rounded-full text-[11px] font-medium">
+                        🛡️ Berlindung di balik <b>Igloo, Pohon Pinus, Kayu, atau Gundukan Salju</b> menahan tembakan biasa!
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // =========================================================================
+        // 1. BANK SOAL PEMBELAJARAN (Bisa disesuaikan dengan mata pelajaran)
+        // =========================================================================
+        const QUESTION_BANK = [
+            { q: "Berapakah hasil dari 15 × 4 + 12?", options: ["62", "72", "82", "68"], answer: 1 },
+            { q: "Planet terbesar di tata surya kita adalah...", options: ["Saturnus", "Bumi", "Jupiter", "Neptunus"], answer: 2 },
+            { q: "Ibu kota negara Jepang adalah...", options: ["Seoul", "Beijing", "Kyoto", "Tokyo"], answer: 3 },
+            { q: "Gas yang dibutuhkan tumbuhan untuk fotosintesis adalah...", options: ["Oksigen", "Karbon Dioksida", "Nitrogen", "Hidrogen"], answer: 1 },
+            { q: "Hasil dari 144 ÷ 12 + 9 adalah...", options: ["21", "19", "23", "20"], answer: 0 },
+            { q: "Alat pernapasan utama pada ikan adalah...", options: ["Paru-paru", "Trakea", "Insang", "Kulit"], answer: 2 },
+            { q: "Sila ke-3 Pancasila dilambangkan dengan gambar...", options: ["Bintang", "Rantai", "Pohon Beringin", "Kepala Banteng"], answer: 2 },
+            { q: "Perubahan wujud benda dari cair menjadi gas disebut...", options: ["Membeku", "Menguap", "Menyublim", "Mengkristal"], answer: 1 },
+            { q: "Sebuah persegi memiliki sisi 9 cm. Berapakah luasnya?", options: ["36 cm²", "81 cm²", "18 cm²", "72 cm²"], answer: 1 },
+            { q: "Gunung tertinggi di dunia adalah...", options: ["Gunung Semeru", "Gunung Fuji", "Gunung Everest", "Gunung Kilimanjaro"], answer: 2 },
+            { q: "Bagian tumbuhan yang berfungsi menyerap air dari tanah adalah...", options: ["Daun", "Batang", "Bunga", "Akar"], answer: 3 },
+            { q: "Hasil dari 25% dari 200 adalah...", options: ["25", "40", "50", "75"], answer: 2 },
+            { q: "Benua terluas di dunia adalah benua...", options: ["Afrika", "Amerika", "Asia", "Eropa"], answer: 2 },
+            { q: "Hewan pemakan tumbuhan dan daging disebut...", options: ["Herbivora", "Karnivora", "Omnivora", "Insektivora"], answer: 2 },
+            { q: "Sudut yang besarnya tepat 90 derajat disebut sudut...", options: ["Lancip", "Tumpul", "Siku-siku", "Lurus"], answer: 2 }
+        ];
+
+        // Daftar 37 nama teman sekelas (total 38 siswa termasuk pemain utama)
+        const CLASSMATE_NAMES = [
+            "Aditya", "Aisyah", "Alif", "Amanda", "Andi", "Anisa", "Arif", "Aulia",
+            "Bagas", "Bella", "Bima", "Budi", "Cahya", "Citra", "Dani", "Dina",
+            "Eka", "Fajar", "Farah", "Galih", "Gita", "Hafiz", "Hana", "Ilham",
+            "Indah", "Irfan", "Kartika", "Kevin", "Lestari", "Lukman", "Maya", "Nabila",
+            "Naufal", "Putri", "Rafi", "Rina", "Rizky"
+        ];
+
+        const AVATAR_EMOJIS = ["🐧", "🦊", "🐻‍❄️", "🦉", "🐺", "🦌", "🦭", "⛄", "🎿", "🏂"];
+
+        // =========================================================================
+        // 2. EFEK SUARA SINTETIS (WEB AUDIO API - TANPA FILE EKSTERNAL)
+        // =========================================================================
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'correct') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.08);
+                    osc.frequency.setValueAtTime(783.99, now + 0.16);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(120, now + 0.25);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+                    osc.start(now);
+                    osc.stop(now + 0.28);
+                } else if (type === 'throw') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.18);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+                } else if (type === 'hit') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(45, now + 0.22);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+                    osc.start(now);
+                    osc.stop(now + 0.22);
+                } else if (type === 'shield') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.linearRampToValueAtTime(480, now + 0.15);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+                }
+            } catch (e) {
+                // Abaikan error audio jika diblokir browser
+            }
+        }
+
+        // =========================================================================
+        // 3. STATE PERMAINAN UTAMA
+        // =========================================================================
+        const gameState = {
+            isRunning: false,
+            timeLeft: 300, // 5 menit (300 detik)
+            players: [],
+            obstacles: [], // Objek Desa Alaska (Igloo, Pohon Pinus, Tumpukan Kayu, Gundukan Salju)
+            snowflakesBg: [],
+            snowballs: [],
+            particles: [],
+            floatingTexts: [],
+            myId: "player_0",
+            selectedTargetId: null,
+            currentQuestion: null,
+            isAnsweringLocked: false,
+            seekCoverMode: false
+        };
+
+        const canvas = document.getElementById('arenaCanvas');
+        const ctx = canvas.getContext('2d');
+        let lastFrameTime = 0;
+
+        // =========================================================================
+        // 4. RESPONSIVE CANVAS & LINGKUNGAN DESA ALASKA
+        // =========================================================================
+        function resizeCanvas() {
+            const wrapper = document.getElementById('canvasWrapper');
+            if (!wrapper) return;
+            const prevW = canvas.width || wrapper.clientWidth;
+            const prevH = canvas.height || wrapper.clientHeight;
+            canvas.width = wrapper.clientWidth;
+            canvas.height = wrapper.clientHeight;
+
+            if (gameState.obstacles.length > 0 && prevW > 0 && prevH > 0) {
+                const scaleX = canvas.width / prevW;
+                const scaleY = canvas.height / prevH;
+                gameState.obstacles.forEach(obs => {
+                    obs.x *= scaleX;
+                    obs.y *= scaleY;
+                });
+                gameState.players.forEach(p => {
+                    p.x = Math.max(30, Math.min(canvas.width - 30, p.x * scaleX));
+                    p.y = Math.max(40, Math.min(canvas.height - 30, p.y * scaleY));
+                });
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function generateAlaskaEnvironment() {
+            const w = canvas.width || 800;
+            const h = canvas.height || 600;
+            gameState.obstacles = [];
+
+            // 1. Rumah Eskimo (Igloo)
+            gameState.obstacles.push(
+                { type: 'igloo', label: 'Igloo Utara', x: w * 0.22, y: h * 0.28, radius: 44 },
+                { type: 'igloo', label: 'Igloo Selatan', x: w * 0.78, y: h * 0.72, radius: 44 }
+            );
+
+            // 2. Pohon Pinus Bersalju
+            gameState.obstacles.push(
+                { type: 'pine', label: 'Pohon Pinus', x: w * 0.16, y: h * 0.70, radius: 34 },
+                { type: 'pine', label: 'Pohon Pinus', x: w * 0.50, y: h * 0.22, radius: 36 },
+                { type: 'pine', label: 'Pohon Pinus', x: w * 0.82, y: h * 0.26, radius: 34 },
+                { type: 'pine', label: 'Pohon Pinus', x: w * 0.48, y: h * 0.78, radius: 36 }
+            );
+
+            // 3. Tumpukan Kayu Bakar
+            gameState.obstacles.push(
+                { type: 'woodpile', label: 'Tumpukan Kayu', x: w * 0.34, y: h * 0.52, radius: 32 },
+                { type: 'woodpile', label: 'Tumpukan Kayu', x: w * 0.68, y: h * 0.48, radius: 32 }
+            );
+
+            // 4. Gundukan Salju Tebal
+            gameState.obstacles.push(
+                { type: 'snowmound', label: 'Gundukan Salju', x: w * 0.36, y: h * 0.25, radius: 34 },
+                { type: 'snowmound', label: 'Gundukan Salju', x: w * 0.64, y: h * 0.75, radius: 34 },
+                { type: 'snowmound', label: 'Gundukan Salju', x: w * 0.50, y: h * 0.50, radius: 36 }
+            );
+
+            // Efek hujan salju ringan di latar belakang
+            gameState.snowflakesBg = [];
+            for (let i = 0; i < 45; i++) {
+                gameState.snowflakesBg.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    r: 1.5 + Math.random() * 2.5,
+                    speedY: 0.4 + Math.random() * 0.8,
+                    drift: (Math.random() - 0.5) * 0.4
+                });
+            }
+        }
+
+        // =========================================================================
+        // 5. KONTROL MULAI & RESET GAME
+        // =========================================================================
+        function startGame() {
+            initAudio();
+            resizeCanvas();
+
+            const inputName = document.getElementById('playerNameInput').value.trim() || "Kamu";
+            gameState.players = [];
+            gameState.snowballs = [];
+            gameState.particles = [];
+            gameState.floatingTexts = [];
+            gameState.timeLeft = 300; // 5 menit
+            gameState.isRunning = true;
+            gameState.seekCoverMode = false;
+
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('frozenOverlay').classList.add('hidden');
+            document.getElementById('startModal').classList.add('hidden');
+            document.getElementById('endModal').classList.add('hidden');
+            updateTimerDisplay();
+
+            generateAlaskaEnvironment();
+
+            // Karakter Pemain Utama
+            gameState.players.push({
+                id: gameState.myId,
+                name: inputName,
+                isMe: true,
+                emoji: "🦸",
+                x: canvas.width * 0.5,
+                y: canvas.height * 0.5,
+                vx: (Math.random() - 0.5) * 1.2,
+                vy: (Math.random() - 0.5) * 1.2,
+                hp: 5, // 5 Nyawa (5x kena tembak = Game Over)
+                isEliminated: false,
+                questionsAnswered: 0,
+                hitsLanded: 0,
+                score: 0,
+                combo: 0,
+                ammo: 0, // 1 jawaban benar = +3 peluru
+                hasMegaShot: false,
+                frozenUntil: 0,
+                isHiding: false,
+                hideTimer: 0,
+                aiTimer: 0
+            });
+
+            // 37 Bot Teman Sekelas (Total 38 Siswa)
+            CLASSMATE_NAMES.forEach((name, idx) => {
+                gameState.players.push({
+                    id: `bot_${idx}`,
+                    name: name,
+                    isMe: false,
+                    emoji: AVATAR_EMOJIS[idx % AVATAR_EMOJIS.length],
+                    x: 40 + Math.random() * (canvas.width - 80),
+                    y: 60 + Math.random() * (canvas.height - 100),
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5,
+                    hp: 5,
+                    isEliminated: false,
+                    questionsAnswered: 0,
+                    hitsLanded: 0,
+                    score: 0,
+                    combo: 0,
+                    ammo: Math.random() > 0.6 ? 3 : 0,
+                    hasMegaShot: false,
+                    frozenUntil: 0,
+                    isHiding: false,
+                    hideTimer: 0,
+                    aiTimer: 1000 + Math.random() * 3500
+                });
+            });
+
+            populateTargetDropdown();
+            loadNextQuestion();
+            updateMyControllerUI();
+            updateAliveCounter();
+
+            lastFrameTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            gameState.isRunning = false;
+            gameState.seekCoverMode = false;
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('frozenOverlay').classList.add('hidden');
+            document.getElementById('endModal').classList.add('hidden');
+            document.getElementById('startModal').classList.remove('hidden');
+        }
+
+        // =========================================================================
+        // 6. LOGIKA KUIS PEMBELAJARAN & PELURU SALJU
+        // =========================================================================
+        function loadNextQuestion() {
+            const randomIndex = Math.floor(Math.random() * QUESTION_BANK.length);
+            gameState.currentQuestion = QUESTION_BANK[randomIndex];
+            gameState.isAnsweringLocked = false;
+
+            document.getElementById('questionText').textContent = gameState.currentQuestion.q;
+            document.getElementById('feedbackBadge').classList.add('hidden');
+
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            const letters = ['A', 'B', 'C', 'D'];
+            gameState.currentQuestion.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-sky-400 text-sm font-medium text-slate-100 transition flex items-center gap-3 cursor-pointer active:scale-[0.99]";
+                btn.innerHTML = `
+                    <span class="w-6 h-6 rounded-lg bg-slate-700 text-sky-300 font-game font-bold text-xs flex items-center justify-center shrink-0">${letters[idx]}</span>
+                    <span>${optText}</span>
+                `;
+                btn.onclick = () => handleAnswer(idx, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedIndex, clickedBtn) {
+            const me = getMyPlayer();
+            if (!gameState.isRunning || gameState.isAnsweringLocked || !me || me.isEliminated) return;
+            if (Date.now() < me.frozenUntil) return;
+
+            gameState.isAnsweringLocked = true;
+            const isCorrect = selectedIndex === gameState.currentQuestion.answer;
+            const badge = document.getElementById('feedbackBadge');
+            badge.classList.remove('hidden');
+
+            if (isCorrect) {
+                playSound('correct');
+                clickedBtn.classList.remove('bg-slate-800', 'border-slate-700');
+                clickedBtn.classList.add('bg-emerald-600/30', 'border-emerald-400', 'text-emerald-200');
+                
+                me.questionsAnswered += 1;
+                me.score += 1; // +1 poin dari menjawab soal
+                me.combo += 1;
+                me.ammo += 3; // 1 jawaban benar = +3 peluru
+
+                if (me.combo >= 3) {
+                    me.hasMegaShot = true;
+                }
+
+                badge.textContent = me.hasMegaShot ? "🔥 +3 PELURU & MEGA SHOT!" : "✅ BENAR! +3 PELURU!";
+                badge.className = "text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300";
+
+                spawnFloatingText(me.x, me.y - 25, "+3 Peluru! ❄️", "#0284c7");
+                updateMyControllerUI();
+                setTimeout(loadNextQuestion, 600);
+            } else {
+                playSound('wrong');
+                clickedBtn.classList.remove('bg-slate-800', 'border-slate-700');
+                clickedBtn.classList.add('bg-rose-600/30', 'border-rose-400', 'text-rose-200');
+                
+                me.combo = 0;
+                me.hasMegaShot = false;
+                badge.textContent = "❌ SALAH! Tunggu 1.5 detik...";
+                badge.className = "text-xs font-bold px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300";
+
+                updateMyControllerUI();
+                setTimeout(loadNextQuestion, 1500);
+            }
+        }
+
+        // =========================================================================
+        // 7. LOGIKA PETAK UMPET, TARGET & TEMBAKAN SALJU
+        // =========================================================================
+        function toggleSeekCover() {
+            const me = getMyPlayer();
+            if (!me || me.isEliminated) return;
+            gameState.seekCoverMode = !gameState.seekCoverMode;
+            const btn = document.getElementById('hideActionBtn');
+            if (gameState.seekCoverMode) {
+                btn.textContent = "🏃 Sedang Mencari Sembunyi...";
+                btn.className = "text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 transition cursor-pointer";
+                spawnFloatingText(me.x, me.y - 22, "Cari perlindungan! 🌲", "#059669");
+            } else {
+                btn.textContent = "🌲 Cari Tempat Sembunyi";
+                btn.className = "text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition cursor-pointer";
+            }
+        }
+
+        function getMyPlayer() {
+            return gameState.players.find(p => p.id === gameState.myId);
+        }
+
+        function populateTargetDropdown() {
+            const select = document.getElementById('targetSelect');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- Klik teman di arena / pilih --</option>';
+            
+            const aliveBots = gameState.players
+                .filter(p => !p.isMe && !p.isEliminated)
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            aliveBots.forEach(bot => {
+                const opt = document.createElement('option');
+                opt.value = bot.id;
+                opt.textContent = `${bot.emoji} ${bot.name} (${bot.hp}❤️)${bot.isHiding ? ' 🛡️' : ''}`;
+                select.appendChild(opt);
+            });
+
+            if (aliveBots.some(b => b.id === currentVal)) {
+                select.value = currentVal;
+            } else if (gameState.selectedTargetId === currentVal) {
+                gameState.selectedTargetId = null;
+            }
+        }
+
+        function syncTargetFromDropdown() {
+            const val = document.getElementById('targetSelect').value;
+            gameState.selectedTargetId = val || null;
+            updateMyControllerUI();
+        }
+
+        function selectTargetOnCanvas(targetPlayer) {
+            if (!targetPlayer || targetPlayer.isMe || targetPlayer.isEliminated) return;
+            gameState.selectedTargetId = targetPlayer.id;
+            document.getElementById('targetSelect').value = targetPlayer.id;
+            updateMyControllerUI();
+        }
+
+        function playerThrowSnowball() {
+            const me = getMyPlayer();
+            if (!me || me.isEliminated || me.ammo <= 0 || Date.now() < me.frozenUntil) return;
+
+            let target = gameState.players.find(p => p.id === gameState.selectedTargetId && !p.isEliminated);
+            if (!target) {
+                const aliveEnemies = gameState.players.filter(p => !p.isMe && !p.isEliminated);
+                if (aliveEnemies.length === 0) return;
+                target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+                gameState.selectedTargetId = target.id;
+                document.getElementById('targetSelect').value = target.id;
+            }
+
+            const isMega = me.hasMegaShot;
+            launchSnowball(me, target, isMega);
+
+            me.ammo -= 1;
+            if (isMega) {
+                me.hasMegaShot = false;
+                me.combo = 0;
+            }
+            updateMyControllerUI();
+        }
+
+        function launchSnowball(shooter, target, isMega) {
+            playSound('throw');
+            shooter.isHiding = false;
+            shooter.hideTimer = 0;
+
+            gameState.snowballs.push({
+                shooterId: shooter.id,
+                shooterName: shooter.name,
+                targetId: target.id,
+                x: shooter.x,
+                y: shooter.y,
+                speed: isMega ? 10.5 : 8.5,
+                isMega: isMega
+            });
+        }
+
+        // =========================================================================
+        // 8. PEMBARUAN UI PANEL SISWA & LEADERBOARD
+        // =========================================================================
+        function updateMyControllerUI() {
+            const me = getMyPlayer();
+            if (!me) return;
+
+            // Tampilan Nyawa (5 Hati)
+            let heartsStr = "";
+            for (let i = 0; i < 5; i++) {
+                heartsStr += i < me.hp ? "❤️" : "🖤";
+            }
+            document.getElementById('playerLivesDisplay').textContent = heartsStr;
+
+            // Tampilan Total Skor (Soal Benar + Lawan Tertembak)
+            document.getElementById('playerScoreDisplay').textContent = me.score;
+            document.getElementById('comboDisplay').textContent = `${me.questionsAnswered} Soal • ${me.hitsLanded} Hit`;
+
+            const visual = document.getElementById('snowballVisual');
+            const statusText = document.getElementById('snowballStatusText');
+            const throwBtn = document.getElementById('throwBtn');
+
+            if (me.ammo <= 0 || me.isEliminated) {
+                visual.className = "w-12 h-12 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 flex items-center justify-center text-2xl transition-all";
+                visual.textContent = "💨";
+                statusText.textContent = "0 Peluru (Jawab soal = +3!)";
+                statusText.className = "font-game font-bold text-sm text-slate-400";
+                throwBtn.disabled = true;
+                throwBtn.className = "px-5 py-2.5 rounded-xl font-game font-bold text-sm bg-slate-700 text-slate-400 cursor-not-allowed transition flex items-center gap-1.5";
+            } else {
+                throwBtn.disabled = false;
+                throwBtn.className = "px-5 py-2.5 rounded-xl font-game font-bold text-sm bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/30 cursor-pointer transition transform active:scale-95 flex items-center gap-1.5";
+                
+                if (me.hasMegaShot) {
+                    visual.className = "w-12 h-12 rounded-full bg-amber-400/20 border-2 border-amber-400 flex items-center justify-center text-2xl shadow-lg shadow-amber-400/40 animate-pulse";
+                    visual.textContent = "☄️";
+                    statusText.textContent = `${me.ammo} Peluru (1x MEGA SHOT!)`;
+                    statusText.className = "font-game font-bold text-sm text-amber-300";
+                } else {
+                    visual.className = "w-12 h-12 rounded-full bg-sky-400/20 border-2 border-sky-400 flex items-center justify-center text-2xl shadow-md shadow-sky-400/20";
+                    visual.textContent = "⚪";
+                    statusText.textContent = `${me.ammo} Peluru Salju Siap!`;
+                    statusText.className = "font-game font-bold text-sm text-sky-300";
+                }
+            }
+        }
+
+        function updateAliveCounter() {
+            const aliveCount = gameState.players.filter(p => !p.isEliminated).length;
+            const totalCount = gameState.players.length;
+            document.getElementById('aliveCounterText').textContent = `Desa Alaska • ${aliveCount}/${totalCount} Siswa Bertahan`;
+            
+            // Jika hanya tersisa 1 pemain bertahan hidup, langsung akhiri pertandingan
+            if (gameState.isRunning && aliveCount <= 1) {
+                endGame();
+            }
+        }
+
+        function pushKillFeed(message) {
+            const feedEl = document.getElementById('killFeedText');
+            feedEl.textContent = message;
+            feedEl.classList.remove('kill-feed-item');
+            void feedEl.offsetWidth;
+            feedEl.classList.add('kill-feed-item');
+        }
+
+        function updateLeaderboardUI() {
+            const sorted = [...gameState.players].sort((a, b) => b.score - a.score);
+            const top3 = sorted.slice(0, 3);
+            const container = document.getElementById('miniLeaderboard');
+            
+            const medals = ["🥇", "🥈", "🥉"];
+            container.innerHTML = top3.map((p, idx) => `
+                <div class="flex items-center justify-between ${p.isMe ? 'text-sky-300 font-bold' : 'text-slate-200'} ${p.isEliminated ? 'opacity-50 line-through' : ''}">
+                    <span class="truncate pr-1">${medals[idx]} ${p.name}</span>
+                    <span class="font-game font-bold text-amber-300 shrink-0">${p.score} <span class="text-[10px] text-slate-400">(${p.questionsAnswered}Q+${p.hitsLanded}H)</span></span>
+                </div>
+            `).join('');
+        }
+
+        // =========================================================================
+        // 9. GAME LOOP, AI BOT, PETAK UMPET & FISIKA BOLA SALJU
+        // =========================================================================
+        let secondAccumulator = 0;
+
+        function gameLoop(timestamp) {
+            if (!gameState.isRunning) return;
+
+            const dt = timestamp - lastFrameTime;
+            lastFrameTime = timestamp;
+
+            // Update Timer 5 Menit (300 Detik)
+            secondAccumulator += dt;
+            if (secondAccumulator >= 1000) {
+                secondAccumulator -= 1000;
+                gameState.timeLeft -= 1;
+                updateTimerDisplay();
+                updateLeaderboardUI();
+                populateTargetDropdown();
+
+                if (gameState.timeLeft <= 0) {
+                    endGame();
+                    return;
+                }
+            }
+
+            updateEntities(dt);
+            renderArena();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(Math.max(0, gameState.timeLeft) / 60);
+            const s = Math.max(0, gameState.timeLeft) % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function updateEntities(dt) {
+            const now = Date.now();
+            const me = getMyPlayer();
+
+            // Update overlay beku pemain utama
+            if (me && !me.isEliminated) {
+                const frozenOverlay = document.getElementById('frozenOverlay');
+                if (now < me.frozenUntil) {
+                    frozenOverlay.classList.remove('hidden');
+                    const rem = Math.ceil((me.frozenUntil - now) / 1000);
+                    document.getElementById('frozenTimer').textContent = rem;
+                } else if (!frozenOverlay.classList.contains('hidden')) {
+                    frozenOverlay.classList.add('hidden');
+                    updateMyControllerUI();
+                }
+            }
+
+            // Update efek hujan salju latar belakang
+            gameState.snowflakesBg.forEach(sf => {
+                sf.y += sf.speedY;
+                sf.x += sf.drift;
+                if (sf.y > canvas.height) {
+                    sf.y = -5;
+                    sf.x = Math.random() * canvas.width;
+                }
+            });
+
+            // 1. Update Pergerakan & AI 38 Siswa
+            gameState.players.forEach(p => {
+                if (p.isEliminated) return;
+                if (now < p.frozenUntil) return; // Diam jika sedang membeku
+
+                // Mode mencari tempat persembunyian untuk pemain utama
+                if (p.isMe && gameState.seekCoverMode) {
+                    let nearestObs = null;
+                    let minDist = Infinity;
+                    gameState.obstacles.forEach(obs => {
+                        const d = Math.hypot(obs.x - p.x, obs.y - p.y);
+                        if (d < minDist) {
+                            minDist = d;
+                            nearestObs = obs;
+                        }
+                    });
+                    if (nearestObs) {
+                        if (minDist > nearestObs.radius * 0.45) {
+                            const angle = Math.atan2(nearestObs.y - p.y, nearestObs.x - p.x);
+                            p.x += Math.cos(angle) * 2.4;
+                            p.y += Math.sin(angle) * 2.4;
+                        } else {
+                            p.isHiding = true;
+                            gameState.seekCoverMode = false;
+                            const btn = document.getElementById('hideActionBtn');
+                            btn.textContent = "🛡️ Berlindung di " + nearestObs.label;
+                            btn.className = "text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition cursor-pointer";
+                        }
+                    }
+                } else if (!p.isHiding) {
+                    // Gerak jelajah biasa
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 30 || p.x > canvas.width - 30) p.vx *= -1;
+                    if (p.y < 55 || p.y > canvas.height - 30) p.vy *= -1;
+                    p.x = Math.max(30, Math.min(canvas.width - 30, p.x));
+                    p.y = Math.max(55, Math.min(canvas.height - 30, p.y));
+
+                    // Cek otomatis masuk tempat persembunyian jika melewati objek
+                    gameState.obstacles.forEach(obs => {
+                        const dist = Math.hypot(p.x - obs.x, p.y - obs.y);
+                        if (dist < obs.radius * 0.65 && Math.random() < 0.015) {
+                            p.isHiding = true;
+                            p.hideTimer = 3500 + Math.random() * 4000;
+                        }
+                    });
+                } else {
+                    // Sedang bersembunyi di balik objek
+                    p.hideTimer -= dt;
+                    if (!p.isMe && p.hideTimer <= 0) {
+                        p.isHiding = false;
+                        p.vx = (Math.random() - 0.5) * 1.6;
+                        p.vy = (Math.random() - 0.5) * 1.6;
+                    }
+                }
+
+                // Simulasi AI untuk 37 teman sekelas
+                if (!p.isMe) {
+                    p.aiTimer -= dt;
+                    if (p.aiTimer <= 0) {
+                        p.aiTimer = 2800 + Math.random() * 4200;
+
+                        if (!p.isHiding) {
+                            p.vx = (Math.random() - 0.5) * 1.7;
+                            p.vy = (Math.random() - 0.5) * 1.7;
+                        }
+
+                        // Simulasi bot menjawab soal dengan benar (+1 skor & +3 peluru)
+                        if (Math.random() < 0.45) {
+                            p.questionsAnswered += 1;
+                            p.score += 1;
+                            p.combo += 1;
+                            p.ammo += 3;
+                            if (p.combo >= 3) p.hasMegaShot = true;
+                        }
+
+                        // Simulasi bot melempar bola salju
+                        if (p.ammo > 0 && Math.random() < 0.55) {
+                            const candidates = gameState.players.filter(other => other.id !== p.id && !other.isEliminated);
+                            if (candidates.length > 0) {
+                                const randomTarget = candidates[Math.floor(Math.random() * candidates.length)];
+                                const useMega = p.hasMegaShot;
+                                launchSnowball(p, randomTarget, useMega);
+                                p.ammo -= 1;
+                                if (useMega) {
+                                    p.hasMegaShot = false;
+                                    p.combo = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. Update Proyektil Bola Salju
+            for (let i = gameState.snowballs.length - 1; i >= 0; i--) {
+                const sb = gameState.snowballs[i];
+                const target = gameState.players.find(p => p.id === sb.targetId);
+
+                if (!target || target.isEliminated) {
+                    gameState.snowballs.splice(i, 1);
+                    continue;
+                }
+
+                const dx = target.x - sb.x;
+                const dy = target.y - sb.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < 18) {
+                    const shooter = gameState.players.find(p => p.id === sb.shooterId);
+                    
+                    // Cek apakah target bersembunyi & tembakan bukan Mega Shot
+                    if (target.isHiding && !sb.isMega) {
+                        playSound('shield');
+                        createSplashParticles(target.x, target.y, false);
+                        spawnFloatingText(target.x, target.y - 25, "🛡️ Terlindung!", "#059669");
+                        if (shooter && shooter.isMe) {
+                            pushKillFeed(`🛡️ ${target.name} bersembunyi! Gunakan Mega Shot (3x Combo) untuk menembusnya!`);
+                        }
+                    } else {
+                        // Tembakan mengenai target!
+                        if (target.isHiding && sb.isMega) {
+                            target.isHiding = false;
+                            spawnFloatingText(target.x, target.y - 40, "💥 PERSEMBUNYIAN JEBOL!", "#f59e0b");
+                        }
+
+                        playSound('hit');
+                        createSplashParticles(target.x, target.y, sb.isMega);
+
+                        // Kurangi nyawa target (-1)
+                        target.hp = Math.max(0, target.hp - 1);
+                        target.frozenUntil = Date.now() + 2500;
+                        target.combo = 0;
+                        target.hasMegaShot = false;
+
+                        // Tambah skor penembak (+1 hit)
+                        if (shooter) {
+                            shooter.hitsLanded += 1;
+                            shooter.score += 1;
+                            if (shooter.isMe) {
+                                updateMyControllerUI();
+                                spawnFloatingText(target.x, target.y - 24, `+1 HIT! (${target.hp}❤️)`, "#0284c7");
+                            }
+                        }
+
+                        // Cek apakah target tereliminasi (5x kena tembak = Game Over)
+                        if (target.hp <= 0) {
+                            target.isEliminated = true;
+                            pushKillFeed(`💀 ${target.name} TERELIMINASI (5x tertembak) oleh ${sb.shooterName}!`);
+                            spawnFloatingText(target.x, target.y - 30, "GAME OVER! 💀", "#e11d48");
+
+                            if (target.isMe) {
+                                updateMyControllerUI();
+                                document.getElementById('eliminatedByText').textContent = `Nyawamu habis! Tembakan terakhir oleh ${sb.shooterName}.`;
+                                document.getElementById('goQuestionsCount').textContent = target.questionsAnswered;
+                                document.getElementById('goHitsCount').textContent = target.hitsLanded;
+                                document.getElementById('goTotalScore').textContent = target.score;
+                                document.getElementById('gameOverOverlay').classList.remove('hidden');
+                            } else if (gameState.selectedTargetId === target.id) {
+                                gameState.selectedTargetId = null;
+                                populateTargetDropdown();
+                                updateMyControllerUI();
+                            }
+                            updateAliveCounter();
+                        } else {
+                            if (target.isMe) {
+                                updateMyControllerUI();
+                                document.getElementById('frozenByText').textContent = `Terkena tembakan ${sb.shooterName}! (Sisa ${target.hp}/5 Nyawa)`;
+                                pushKillFeed(`🥶 Kamu tertembak oleh ${sb.shooterName}! Sisa ${target.hp} nyawa.`);
+                            } else if (shooter && shooter.isMe) {
+                                pushKillFeed(`🎯 Kamu menembak ${target.name}! (Sisa ${target.hp}/5 nyawa)`);
+                            } else if (sb.isMega) {
+                                pushKillFeed(`☄️ MEGA SNOWBALL! ${sb.shooterName} menghantam ${target.name}!`);
+                            }
+                        }
+                    }
+
+                    gameState.snowballs.splice(i, 1);
+                } else {
+                    sb.x += (dx / dist) * sb.speed;
+                    sb.y += (dy / dist) * sb.speed;
+                }
+            }
+
+            // 3. Update Partikel Percikan Salju
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const pt = gameState.particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.alpha -= 0.03;
+                if (pt.alpha <= 0) gameState.particles.splice(i, 1);
+            }
+
+            // 4. Update Teks Melayang
+            for (let i = gameState.floatingTexts.length - 1; i >= 0; i--) {
+                const ft = gameState.floatingTexts[i];
+                ft.y -= 0.8;
+                ft.alpha -= 0.02;
+                if (ft.alpha <= 0) gameState.floatingTexts.splice(i, 1);
+            }
+        }
+
+        function createSplashParticles(x, y, isMega) {
+            const count = isMega ? 24 : 12;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * (isMega ? 5 : 3);
+                gameState.particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: isMega ? 4 : 2.5,
+                    color: isMega ? '#fbbf24' : '#ffffff',
+                    alpha: 1
+                });
+            }
+        }
+
+        function spawnFloatingText(x, y, text, color) {
+            gameState.floatingTexts.push({ x, y, text, color, alpha: 1 });
+        }
+
+        // =========================================================================
+        // 10. RENDER VISUAL DESA ALASKA DI CANVAS
+        // =========================================================================
+        function renderArena() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const now = Date.now();
+
+            // 1. Latar Belakang Salju Desa Alaska
+            const grad = ctx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, '#bae6fd');
+            grad.addColorStop(0.25, '#e0f2fe');
+            grad.addColorStop(1, '#f8fafc');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            // Siluet Pegunungan Salju Alaska di cakrawala atas
+            ctx.fillStyle = '#93c5fd';
+            ctx.beginPath();
+            ctx.moveTo(0, 75);
+            ctx.lineTo(w * 0.15, 25);
+            ctx.lineTo(w * 0.32, 75);
+            ctx.lineTo(w * 0.52, 18);
+            ctx.lineTo(w * 0.72, 75);
+            ctx.lineTo(w * 0.88, 30);
+            ctx.lineTo(w, 75);
+            ctx.closePath();
+            ctx.fill();
+
+            // Puncak es pegunungan
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(w * 0.15, 25); ctx.lineTo(w * 0.11, 40); ctx.lineTo(w * 0.19, 40); ctx.closePath();
+            ctx.moveTo(w * 0.52, 18); ctx.lineTo(w * 0.47, 36); ctx.lineTo(w * 0.57, 36); ctx.closePath();
+            ctx.moveTo(w * 0.88, 30); ctx.lineTo(w * 0.84, 44); ctx.lineTo(w * 0.92, 44); ctx.closePath();
+            ctx.fill();
+
+            // 2. Gambar Pemain yang Sedang Bersembunyi (Di belakang objek)
+            gameState.players.filter(p => !p.isEliminated && p.isHiding).forEach(p => drawPlayerCharacter(p, now, true));
+
+            // 3. Gambar Objek Persembunyian Desa Alaska
+            gameState.obstacles.forEach(obs => drawAlaskaObstacle(obs));
+
+            // 4. Gambar Pemain yang Berada di Area Terbuka
+            gameState.players.filter(p => !p.isEliminated && !p.isHiding).forEach(p => drawPlayerCharacter(p, now, false));
+
+            // 5. Gambar Proyektil Bola Salju
+            gameState.snowballs.forEach(sb => {
+                ctx.beginPath();
+                ctx.arc(sb.x, sb.y, sb.isMega ? 10 : 6, 0, Math.PI * 2);
+                ctx.fillStyle = sb.isMega ? '#fef08a' : '#ffffff';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = sb.isMega ? '#f59e0b' : '#0284c7';
+                ctx.stroke();
+            });
+
+            // 6. Gambar Partikel & Hujan Salju Ringan
+            gameState.particles.forEach(pt => {
+                ctx.save();
+                ctx.globalAlpha = pt.alpha;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fillStyle = pt.color;
+                ctx.fill();
+                ctx.restore();
+            });
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            gameState.snowflakesBg.forEach(sf => {
+                ctx.beginPath();
+                ctx.arc(sf.x, sf.y, sf.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 7. Gambar Teks Melayang
+            gameState.floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.font = 'bold 13px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+        }
+
+        function drawAlaskaObstacle(obs) {
+            ctx.save();
+            // Bayangan objek
+            ctx.beginPath();
+            ctx.ellipse(obs.x, obs.y + obs.radius * 0.45, obs.radius * 0.9, obs.radius * 0.35, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
+            ctx.fill();
+
+            if (obs.type === 'igloo') {
+                // Kubah Rumah Eskimo (Igloo)
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y + 8, obs.radius * 0.85, Math.PI, 0);
+                ctx.fillStyle = '#f0f9ff';
+                ctx.fill();
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = '#7dd3fc';
+                ctx.stroke();
+
+                // Garis balok es igloo
+                ctx.beginPath();
+                ctx.moveTo(obs.x - obs.radius * 0.75, obs.y - 4);
+                ctx.lineTo(obs.x + obs.radius * 0.75, obs.y - 4);
+                ctx.moveTo(obs.x - obs.radius * 0.55, obs.y - 16);
+                ctx.lineTo(obs.x + obs.radius * 0.55, obs.y - 16);
+                ctx.strokeStyle = '#bae6fd';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Pintu masuk igloo
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y + 8, 12, Math.PI, 0);
+                ctx.fillStyle = '#0369a1';
+                ctx.fill();
+
+            } else if (obs.type === 'pine') {
+                // Batang pohon
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(obs.x - 5, obs.y + 6, 10, 14);
+
+                // Tiga tingkat daun pinus hijau tua + pucuk salju
+                const tiers = [
+                    { yOff: 8, width: 28, height: 24 },
+                    { yOff: -6, width: 22, height: 22 },
+                    { yOff: -20, width: 16, height: 20 }
+                ];
+                tiers.forEach(t => {
+                    ctx.beginPath();
+                    ctx.moveTo(obs.x, obs.y + t.yOff - t.height);
+                    ctx.lineTo(obs.x - t.width, obs.y + t.yOff);
+                    ctx.lineTo(obs.x + t.width, obs.y + t.yOff);
+                    ctx.closePath();
+                    ctx.fillStyle = '#15803d';
+                    ctx.fill();
+
+                    // Lapisan salju di atas daun pinus
+                    ctx.beginPath();
+                    ctx.moveTo(obs.x, obs.y + t.yOff - t.height);
+                    ctx.lineTo(obs.x - t.width * 0.45, obs.y + t.yOff - t.height * 0.45);
+                    ctx.lineTo(obs.x + t.width * 0.45, obs.y + t.yOff - t.height * 0.45);
+                    ctx.closePath();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                });
+
+            } else if (obs.type === 'woodpile') {
+                // Tumpukan kayu bakar bulat
+                const logs = [
+                    { dx: -12, dy: 8 }, { dx: 0, dy: 8 }, { dx: 12, dy: 8 },
+                    { dx: -6, dy: -2 }, { dx: 6, dy: -2 },
+                    { dx: 0, dy: -12 }
+                ];
+                logs.forEach(l => {
+                    ctx.beginPath();
+                    ctx.arc(obs.x + l.dx, obs.y + l.dy, 7.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#92400e';
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(obs.x + l.dx, obs.y + l.dy, 4.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fde68a';
+                    ctx.fill();
+                });
+                // Tumpukan salju di atas kayu
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y - 16, 9, Math.PI, 0);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+
+            } else if (obs.type === 'snowmound') {
+                // Gundukan salju tebal
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y + 10, obs.radius * 0.95, Math.PI, 0);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#bae6fd';
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawPlayerCharacter(p, now, isHidingBehind) {
+            const isFrozen = now < p.frozenUntil;
+            const isSelected = p.id === gameState.selectedTargetId;
+
+            ctx.save();
+            if (isHidingBehind) {
+                ctx.globalAlpha = 0.72;
+            }
+
+            // Cincin target merah berdenyut jika dipilih pemain
+            if (isSelected) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 24, 0, Math.PI * 2);
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 3]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Lingkaran dasar avatar
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.isMe ? 19 : 15, 0, Math.PI * 2);
+            if (isFrozen) {
+                ctx.fillStyle = '#38bdf8';
+            } else if (p.isMe) {
+                ctx.fillStyle = '#0284c7';
+            } else {
+                ctx.fillStyle = '#ffffff';
+            }
+            ctx.fill();
+            ctx.lineWidth = p.isMe ? 3 : 2;
+            ctx.strokeStyle = isFrozen ? '#0369a1' : (p.isMe ? '#fbbf24' : '#94a3b8');
+            ctx.stroke();
+
+            // Emoji Avatar
+            ctx.font = p.isMe ? '20px sans-serif' : '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(isFrozen ? '🥶' : p.emoji, p.x, p.y + 1);
+
+            // Ikon peluru salju di tangan jika siap menembak
+            if (p.ammo > 0 && !isFrozen) {
+                ctx.beginPath();
+                ctx.arc(p.x + 13, p.y - 8, p.hasMegaShot ? 7 : 5, 0, Math.PI * 2);
+                ctx.fillStyle = p.hasMegaShot ? '#fbbf24' : '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = '#0284c7';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // Label Nama Siswa + Ikon Perisai jika sedang bersembunyi
+            ctx.font = p.isMe ? 'bold 11px Inter, sans-serif' : '600 10px Inter, sans-serif';
+            const displayLabel = p.isHiding ? `🛡️ ${p.name}` : p.name;
+            const textWidth = ctx.measureText(displayLabel).width;
+            
+            ctx.fillStyle = p.isMe ? 'rgba(2, 132, 199, 0.92)' : (p.isHiding ? 'rgba(5, 150, 105, 0.9)' : 'rgba(15, 23, 42, 0.78)');
+            ctx.beginPath();
+            ctx.roundRect(p.x - textWidth / 2 - 5, p.y + 18, textWidth + 10, 15, 6);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(displayLabel, p.x, p.y + 25.5);
+
+            // Indikator 5 titik nyawa (HP) di bawah nama
+            const dotSpacing = 6;
+            const startX = p.x - ((5 - 1) * dotSpacing) / 2;
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.arc(startX + i * dotSpacing, p.y + 37, 2.2, 0, Math.PI * 2);
+                ctx.fillStyle = i < p.hp ? '#ef4444' : 'rgba(15, 23, 42, 0.35)';
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // Klik / Tap pada karakter teman di arena untuk membidik target
+        canvas.addEventListener('click', (e) => {
+            if (!gameState.isRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            let closest = null;
+            let minDist = 34;
+
+            gameState.players.forEach(p => {
+                if (p.isMe || p.isEliminated) return;
+                const d = Math.hypot(p.x - clickX, p.y - clickY);
+                if (d < minDist) {
+                    minDist = d;
+                    closest = p;
+                }
+            });
+
+            if (closest) {
+                selectTargetOnCanvas(closest);
+            }
+        });
+
+        // =========================================================================
+        // 11. AKHIR PERMAINAN & PODIUM PEMENANG
+        // =========================================================================
+        function endGame() {
+            gameState.isRunning = false;
+            const sorted = [...gameState.players].sort((a, b) => b.score - a.score);
+            const top5 = sorted.slice(0, 5);
+            const podiumContainer = document.getElementById('podiumList');
+            const medals = ["🥇 JUARA 1", "🥈 JUARA 2", "🥉 JUARA 3", "🏅 #4", "🏅 #5"];
+
+            podiumContainer.innerHTML = top5.map((p, idx) => `
+                <div class="flex items-center justify-between p-3 rounded-2xl ${idx === 0 ? 'bg-amber-500/20 border border-amber-400/50' : 'bg-slate-900/80 border border-slate-700'}">
+                    <div class="flex items-center gap-3">
+                        <span class="font-game font-bold text-xs px-2.5 py-1 rounded-lg ${idx === 0 ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-300'}">${medals[idx]}</span>
+                        <div>
+                            <div class="font-bold text-sm ${p.isMe ? 'text-sky-300' : 'text-white'}">${p.emoji} ${p.name} ${p.isEliminated ? '(Tereliminasi)' : ''}</div>
+                            <div class="text-[11px] text-slate-400">📝 ${p.questionsAnswered} Soal Benar • 🎯 ${p.hitsLanded} Lawan Tertembak</div>
+                        </div>
+                    </div>
+                    <div class="font-game font-bold text-amber-400 text-base">${p.score} Poin</div>
+                </div>
+            `).join('');
+
+            document.getElementById('endModal').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
